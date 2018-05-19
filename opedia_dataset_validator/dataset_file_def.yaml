@@ -1,0 +1,84 @@
+columns:
+  data:
+    time:
+      type: datetime
+      format: YYYY-MM-DD HH:mm:ss
+    lat:
+      type: float
+      min: -90
+      max: 90
+    lon:
+      type: float
+      min: -180
+      max: 180
+    depth:
+      type: float
+      min: 0
+  metadata:
+    dataset_short_name:
+      type: string
+      max: 49
+    dataset_long_name:
+      type: string
+      max: 499
+    dataset_version:
+      type: string
+      max: 49
+    dataset_release_date:
+      type: datetime
+      format: YYYY-MM-DD
+    dataset_make:
+      type: string
+      max: 49
+    dataset_source:
+      type: string
+      max: 99
+    dataset_doi:
+      type: string
+    dataset_history:
+      type: string
+    dataset_description:
+      type: string
+    dataset_references:
+      type: string
+      max: 49
+  vars:
+    var_short_name:
+      type: string
+      max: 49
+    var_long_name:
+      type: string
+      max: 499
+    var_standard_name:
+      type: string
+      max: 499
+    var_sensor:
+      type: string
+      max: 49
+    var_unit:
+      type: string
+      max: 49
+    var_spatial_res:
+      type: string
+      max: 49
+    var_temporal_res:
+      type: string
+      max: 49
+    var_missing_value:
+      type: string
+      max: 49
+    var_discipline:
+      type: string
+      max: 99
+    var_keywords:
+      type: string
+      max: 499
+    var_comment:
+      type: string
+
+sheets:
+  data: data
+  metadata: dataset_meta_data
+  vars: vars_meta_data
+
+file_date: YYYY-MM-DD
