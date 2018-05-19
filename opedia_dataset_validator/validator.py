@@ -1,9 +1,11 @@
+from __future__ import unicode_literals
 from io import open
 import arrow
 import os
 import oyaml as yaml
 import pandas as pd
 import re
+import sys
 
 
 def validate(input_path):
@@ -22,7 +24,10 @@ def validate_column_datetimes(series, colspec, sheet):
     errors = []
 
     # Convert to strings, might be a datetime.datetime object
-    converted = series.astype(str)
+    if (sys.version_info > (3, 0)):
+        converted = series.astype(str)
+    else:
+        converted = series.astype(unicode)
 
     if colspec.get('required', False):
         # Find empty rows first
@@ -121,11 +126,14 @@ def validate_column_floats(series, colspec, sheet):
 def validate_column_strings(series, colspec, sheet):
     errors = []
 
-    # Make sure these are strings
-    series = series.astype(str)
+    # Convert to strings
+    if (sys.version_info > (3, 0)):
+        converted = series.astype(str)
+    else:
+        converted = series.astype(unicode)
 
     if colspec.get('required', False):
-        empty_errors = series[series.str.len() == 0]
+        empty_errors = converted[converted.str.len() == 0]
         for idx, val in empty_errors.iteritems():
             errors.append({
                 'message': 'missing required field',
@@ -134,7 +142,7 @@ def validate_column_strings(series, colspec, sheet):
                 'sheet': sheet
             })
     if colspec.get('max', False):
-        maxlen_errors = series[series.str.len() >= colspec['max']]
+        maxlen_errors = converted[converted.str.len() >= colspec['max']]
         for idx, val in maxlen_errors.iteritems():
             errors.append({
                 'message': 'string length > %d' % colspec['max'],

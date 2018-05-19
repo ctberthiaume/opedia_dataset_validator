@@ -1,4 +1,4 @@
-import csv
+import sys
 
 def print_tsv_errors(errors, fh, print_all=True, header=True, print_value=False):
     fill_error_fields(errors)
@@ -16,12 +16,14 @@ def print_tsv_errors(errors, fh, print_all=True, header=True, print_value=False)
         outkeys = ['sheet', 'column', 'row', 'message']
         for e in errors:
             _ = e.pop('value', None)
-    writer = csv.DictWriter(fh, outkeys, delimiter='\t', lineterminator='\n')
+
     if header:
-        fh.write('#')
-        writer.writeheader()
-    for e in errors_output:
-        writer.writerow(e)
+        print('#%s' % '\t'.join(outkeys))
+    for e in errors:
+        if (sys.version_info > (3, 0)):
+            print('%s' % '\t'.join([str(e[k]) for k in outkeys]))
+        else:
+            print('%s' % '\t'.join([unicode(e[k]) for k in outkeys]))
 
 
 def fill_error_fields(errors):
