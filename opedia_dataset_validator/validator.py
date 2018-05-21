@@ -216,7 +216,7 @@ def validate_sheet_data(wb):
     extra_found = set(vars_found).difference(set(vars_defined))
     if extra_defined:
         errors.append({
-            'message': 'some data variables were defined in the "%s" worksheet but were not found in the "%s" worksheet:' % (spec['sheets']['vars'], spec['sheets']['data']),
+            'message': 'some data variables were defined in the "%s" worksheet but were not found in the "%s" worksheet' % (spec['sheets']['vars'], spec['sheets']['data']),
             'value': ', '.join(extra_defined)
         })
     if extra_found:
