@@ -3,6 +3,7 @@ columns:
     time:
       type: datetime
       format: YYYY-MM-DD HH:mm:ss
+      required: True
     lat:
       type: float
       min: -90

@@ -9,8 +9,13 @@ import sys
 
 
 def validate(input_path):
-    wb = pd.read_excel(input_path, sheet_name=None, na_values=[],
-                       keep_default_na=False)
+    if (sys.version_info > (3, 0)):
+        wb = pd.read_excel(input_path, sheet_name=None, na_values=[],
+                       keep_default_na=False, dtype=str)
+    else:
+        wb = pd.read_excel(input_path, sheet_name=None, na_values=[],
+                       keep_default_na=False, dtype=unicode)
+
     errors = []
     errors.extend(validate_filename(input_path))
     errors.extend(validate_all_sheets_present(wb))
@@ -23,25 +28,11 @@ def validate(input_path):
 def validate_column_datetimes(series, colspec, sheet):
     errors = []
 
-    # Convert to strings, might be a datetime.datetime object
-    if (sys.version_info > (3, 0)):
-        converted = series.astype(str)
-    else:
-        converted = series.astype(unicode)
-
-    if colspec.get('required', False):
-        # Find empty rows first
-        empty_errors = converted[converted.str.len() == 0]
-        for idx, val in empty_errors.iteritems():
-            errors.append({
-                'message': 'missing required field',
-                'row': idx + 1,
-                'column': series.name,
-                'sheet': sheet
-            })
+    empty_errors, series = validate_column_generic(series, colspec, sheet)
+    errors.extend(empty_errors)
 
     # Now look for format errors in non-empty rows
-    present = converted[converted.str.len() > 0]
+    present = series[series.str.len() > 0]
     for idx, val in present.iteritems():
         try:
             dt = arrow.get(val, colspec['format'])
@@ -49,7 +40,7 @@ def validate_column_datetimes(series, colspec, sheet):
             errors.append({
                 'message': 'error in datetime string: %s' % e,
                 'value': val,
-                'row': idx + 1,
+                'row': idx,
                 'column': series.name,
                 'sheet': sheet
             })
@@ -57,7 +48,7 @@ def validate_column_datetimes(series, colspec, sheet):
             errors.append({
                 'message': 'invalid datetime string - should match %s' % colspec['format'],
                 'value': val,
-                'row': idx + 1,
+                'row': idx,
                 'column': series.name,
                 'sheet': sheet
             })
@@ -68,19 +59,8 @@ def validate_column_datetimes(series, colspec, sheet):
 def validate_column_floats(series, colspec, sheet):
     errors = []
 
-    if colspec.get('required', False):
-        empty_errors = converted[converted.str.len() == 0]
-        for idx, val in empty_errors.iteritems():
-            errors.append({
-                'message': 'missing required field',
-                'row': idx + 1,
-                'column': series.name,
-                'sheet': sheet
-            })
-
-    if colspec.get('na', False):
-        # Remove NA values
-        series = series[_series != colspec['na']]
+    empty_errors, series = validate_column_generic(series, colspec, sheet)
+    errors.extend(empty_errors)
 
     # Convert to floats
     converted = pd.to_numeric(series, errors='coerce')
@@ -92,7 +72,7 @@ def validate_column_floats(series, colspec, sheet):
         errors.append({
             'message': 'invalid value',
             'value': val,
-            'row': idx + 1,
+            'row': idx,
             'column': series.name,
             'sheet': sheet
         })
@@ -105,7 +85,7 @@ def validate_column_floats(series, colspec, sheet):
             errors.append({
                 'message': 'value less than minimum of {}'.format(colspec['min']),
                 'value': val,
-                'row': idx + 1,
+                'row': idx,
                 'column': series.name,
                 'sheet': sheet
             })
@@ -115,7 +95,7 @@ def validate_column_floats(series, colspec, sheet):
             errors.append({
                 'message': 'value greater than maximum of {}'.format(colspec['max']),
                 'value': val,
-                'row': idx + 1,
+                'row': idx,
                 'column': series.name,
                 'sheet': sheet
             })
@@ -123,31 +103,51 @@ def validate_column_floats(series, colspec, sheet):
     return errors
 
 
-def validate_column_strings(series, colspec, sheet):
+def validate_column_generic(series, colspec, sheet):
     errors = []
 
-    # Convert to strings
-    if (sys.version_info > (3, 0)):
-        converted = series.astype(str)
-    else:
-        converted = series.astype(unicode)
+    required = colspec.get('required', None)
+    na = colspec.get('na', None)
 
-    if colspec.get('required', False):
-        empty_errors = converted[converted.str.len() == 0]
+    if not required:
+        # Empty cell is a valid value. Remove empty cells before further checks
+        series = series[series.str.len() > 0]
+    elif str(na) == '':
+        # Empty cell is a valid value. Remove empty cells before further checks
+        series = series[series.str.len() > 0]
+    else:
+        # NA is None or is not the empty string, therefore empty cells are not
+        # valid values. Flag as errors.
+        empty_errors = series[series.str.len() == 0]
         for idx, val in empty_errors.iteritems():
             errors.append({
                 'message': 'missing required field',
-                'row': idx + 1,
+                'row': idx,
                 'column': series.name,
                 'sheet': sheet
             })
+        # Now remove empty cells
+        series = series[series.str.len() > 0]
+        if na is not None:
+            # Remove NA values before further checks
+            series = series[series == na]
+
+    return (errors, series)
+
+
+def validate_column_strings(series, colspec, sheet):
+    errors = []
+
+    empty_errors, series = validate_column_generic(series, colspec, sheet)
+    errors.extend(empty_errors)
+
     if colspec.get('max', False):
-        maxlen_errors = converted[converted.str.len() >= colspec['max']]
+        maxlen_errors = series[series.str.len() >= colspec['max']]
         for idx, val in maxlen_errors.iteritems():
             errors.append({
                 'message': 'string length > %d' % colspec['max'],
                 'value': val,
-                'row': idx + 1,
+                'row': idx,
                 'column': series.name,
                 'sheet': sheet
             })
@@ -201,27 +201,40 @@ def validate_sheet_data(wb):
             'message': 'the first %d columns of "%s" worksheet should be %s' % (len(required_columns), spec['sheets']['data'], required_columns)
         })
         return errors
+    # Validate cells for required columns
+    for colname, colspec in spec['columns']['data'].items():
+        validator = validator_lookup[colspec["type"]]
+        errors.extend(validator(df[colname], colspec, spec['sheets']['data']))
 
-    # Collect variable short names from vars_meta_data sheet
+    # Now check custom data columns
+    df_data = df.drop(required_columns, axis='columns')
+    # Collect variable short names from vars_meta_data sheet and check that
+    # data columns in 'data' sheet match data columns defined in 'vars' sheet.
     vars_defined = wb[spec['sheets']['vars']]['var_short_name'].tolist()
-    vars_found = df.columns.tolist()[len(required_columns):]
+    vars_found = df_data.columns.tolist()
     extra_defined = set(vars_defined).difference(set(vars_found))
     extra_found = set(vars_found).difference(set(vars_defined))
     if extra_defined:
         errors.append({
             'message': 'some data variables were defined in the "%s" worksheet but were not found in the "%s" worksheet:' % (spec['sheets']['vars'], spec['sheets']['data']),
-            'value': list(extra_defined)
+            'value': ', '.join(extra_defined)
         })
     if extra_found:
         errors.append({
             'message': 'some data variables were found in the "%s" worksheet but were not defined in the "%s" worksheet' % (spec['sheets']['data'], spec['sheets']['vars']),
-            'value': list(extra_found)
+            'value': ', '.join(extra_found)
         })
 
-    # Validate cells
-    for colname, colspec in spec['columns']['data'].items():
-        validator = validator_lookup[colspec["type"]]
-        errors.extend(validator(df[colname], colspec, spec['sheets']['data']))
+    # Now validate the actual data only on the condition of
+    # proper missing values.
+    # TODO: Is there any type-checking expected in custom vars?
+    vars_missing_value = wb[spec['sheets']['vars']]['var_missing_value'].tolist()
+    for var, na in zip(vars_defined, vars_missing_value):
+        if var not in extra_defined:
+            sheet = spec['sheets']['vars']
+            colspec = { 'required': True, 'na': na }
+            empty_errors, _ = validate_column_generic(df_data[var], colspec, spec['sheets']['data'])
+            errors.extend(empty_errors)
 
     return errors
 
@@ -288,9 +301,10 @@ with open(spec_file_path, encoding='utf-8') as fh:
     spec = yaml.load(fh)
 
 
-# Register data type validators in lookup
+# Register column validators in lookup
 validator_lookup = {
     'float': validate_column_floats,
     'string': validate_column_strings,
-    'datetime': validate_column_datetimes
+    'datetime': validate_column_datetimes,
+    'generic': validate_column_generic
 }
