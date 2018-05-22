@@ -1,7 +1,11 @@
 #!/bin/sh
 
+# Install pur and other dev packages
 pipenv install --dev || exit
+# Update requirements.txt
 pipenv run pur -r requirements.txt || exit
+
+# Build for PyPI
 python setup.py sdist || exit
 python setup.py bdist_wheel --universal || exit
 
