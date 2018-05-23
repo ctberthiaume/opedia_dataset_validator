@@ -29,22 +29,26 @@ def test_validate_column_generic_required():
 def test_validate_column_strings():
     s = pd.Series(['a', 'bb', 'ccc'], dtype=str)
     errors = odv.validator.validate_column_strings(s, { 'max': 2 }, 'foo')
+    sorted(errors, key=lambda e: e['row'])
     assert len(errors) == 1
     assert errors[0]['row'] == 4
 
 
 def test_validate_column_floats():
-    s = pd.Series(['a', 98.6, 99, 100], dtype=str)
-    errors = odv.validator.validate_column_floats(s, { 'max': 99 }, 'foo')
-    assert len(errors) == 2
+    s = pd.Series(['a', 98.6, 99, 100, 0, -1], dtype=str)
+    errors = odv.validator.validate_column_floats(s, { 'max': 99, 'min': 0 }, 'foo')
+    errors = sorted(errors, key=lambda e: e['row'])
+    assert len(errors) == 3
     assert errors[0]['row'] == 2
     assert errors[1]['row'] == 5
+    assert errors[2]['row'] == 7
 
 
 
 def test_validate_column_datetime():
     s = pd.Series(['a', '2018-05-22', '2018-02-29', '2018-05-2'], dtype=str)
     errors = odv.validator.validate_column_datetimes(s, { 'format': 'YYYY-MM-DD' }, 'foo')
+    sorted(errors, key=lambda e: e['row'])
     assert len(errors) == 3
     assert errors[0]['row'] == 2
     assert errors[1]['row'] == 4

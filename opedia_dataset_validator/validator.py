@@ -86,7 +86,7 @@ def validate_column_floats(series, colspec, sheet):
     # Check range
     min_errors = None
     max_errors = None
-    if colspec.get('min', False):
+    if colspec.get('min', None) is not None:
         min_errors = series[converted < colspec['min']]
         for idx, val in min_errors.iteritems():
             errors.append(error({
@@ -96,7 +96,7 @@ def validate_column_floats(series, colspec, sheet):
                 'column': series.name,
                 'sheet': sheet
             }))
-    if colspec.get('max', False):
+    if colspec.get('max', None) is not None:
         max_errors = series[converted > colspec['max']]
         for idx, val in max_errors.iteritems():
             errors.append(error({
@@ -148,7 +148,7 @@ def validate_column_strings(series, colspec, sheet):
     empty_errors, series = validate_column_generic(series, colspec, sheet)
     errors.extend(empty_errors)
 
-    if colspec.get('max', False):
+    if colspec.get('max', None) is not None:
         maxlen_errors = series[series.str.len() > colspec['max']]
         for idx, val in maxlen_errors.iteritems():
             errors.append(error({
