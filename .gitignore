@@ -4,3 +4,6 @@ build/
 dist/
 .ipynb_checkpoints
 Pipefile.lock
+.pytest_cache
+__pycache__
+.tox

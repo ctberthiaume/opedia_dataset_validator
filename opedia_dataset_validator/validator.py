@@ -8,6 +8,12 @@ import pandas as pd
 import re
 import sys
 
+# Load dataset file specifications
+spec_file_name = 'dataset_file_def.yaml'
+spec_file_path = os.path.join(os.path.dirname(__file__), spec_file_name)
+with open(spec_file_path, encoding='utf-8') as fh:
+    spec = yaml.load(fh)
+
 
 def validate(input_path):
     if (sys.version_info > (3, 0)):
@@ -131,7 +137,7 @@ def validate_column_generic(series, colspec, sheet):
         series = series[series.str.len() > 0]
         if na is not None:
             # Remove NA values before further checks
-            series = series[series == na]
+            series = series[series != na]
 
     return (errors, series)
 
@@ -143,7 +149,7 @@ def validate_column_strings(series, colspec, sheet):
     errors.extend(empty_errors)
 
     if colspec.get('max', False):
-        maxlen_errors = series[series.str.len() >= colspec['max']]
+        maxlen_errors = series[series.str.len() > colspec['max']]
         for idx, val in maxlen_errors.iteritems():
             errors.append(error({
                 'message': 'string length > %d' % colspec['max'],
@@ -156,14 +162,14 @@ def validate_column_strings(series, colspec, sheet):
     return errors
 
 
-def validate_filename(input_path):
+def validate_filename(input_path, spec=spec):
     fn = os.path.basename(input_path)
     errors = []
     filename_re = re.compile(r'^(?P<shortname>.+)_(?P<date>[^_]+)_(?P<version>[^_]+)\.xlsx$')
     m = filename_re.match(fn)
     if not m:
         errors.append(error({
-            'message': 'filename does not match format <dataset_short_name>_<dataset_release_date>_v<dataset_version>.xlxs',
+            'message': 'filename does not match format <dataset_short_name>_<dataset_release_date>_v<dataset_version>.xlsx',
             'value': fn
         }))
     else:
@@ -187,27 +193,22 @@ def validate_filename(input_path):
     return errors
 
 
-def validate_sheet_data(wb):
+def validate_sheet_data(wb, spec=spec):
     errors = []
-    if not (spec['sheets']['data'] in wb and spec['sheets']['vars'] in wb):
+
+    if not spec['sheets']['data'] in wb:
         return errors
 
     df = wb[spec['sheets']['data']]
-
-    # Check that required columns are in order
-    required_columns = list(spec['columns']['data'].keys())
-    if len(df.columns.tolist()) < len(required_columns) or \
-       df.columns.tolist()[0:len(required_columns)] != required_columns:
-        errors.append(error({
-            'message': 'the first %d columns of "%s" worksheet should be %s' % (len(required_columns), spec['sheets']['data'], required_columns)
-        }))
+    errors.extend(validate_sheet_generic(df, 'data', spec=spec))
+    if len(errors):
         return errors
-    # Validate cells for required columns
-    for colname, colspec in spec['columns']['data'].items():
-        validator = validator_lookup[colspec["type"]]
-        errors.extend(validator(df[colname], colspec, spec['sheets']['data']))
+
+    if not spec['sheets']['vars'] in wb:
+        return errors
 
     # Now check custom data columns
+    required_columns = list(spec['columns']['data'].keys())
     df_data = df.drop(required_columns, axis='columns')
     # Collect variable short names from vars_meta_data sheet and check that
     # data columns in 'data' sheet match data columns defined in 'vars' sheet.
@@ -240,66 +241,59 @@ def validate_sheet_data(wb):
     return errors
 
 
-def validate_sheet_metadata(wb):
+def validate_sheet_generic(df, sheet, spec=spec):
     errors = []
+
+    required_columns = list(spec['columns'][sheet].keys())
+    if df.columns.tolist()[:len(required_columns)] != required_columns:
+        errors.append(error({
+            'message': 'the first %d columns of the "%s" worksheet should be %s' % (len(required_columns), spec['sheets'][sheet], required_columns),
+            'value': str(df.columns.tolist()),
+            'sheet': spec['sheets'][sheet]
+        }))
+        return errors
+
+    # Validate cells
+    for colname, colspec in spec['columns'][sheet].items():
+        validator = validator_lookup[colspec['type']]
+        errors.extend(validator(df[colname], colspec, spec['sheets'][sheet]))
+
+    return errors
+
+
+def validate_sheet_metadata(wb, spec=spec):
+    errors = []
+
     if not spec['sheets']['metadata'] in wb:
         return errors
 
-    required_columns = list(spec['columns']['metadata'].keys())
     df = wb[spec['sheets']['metadata']]
-    if df.columns.tolist() != required_columns:
-        errors.append(error({
-            'message': 'incorrect set or order of columns in the "%s" worksheet, expected %s' % (spec['sheets']['metadata'], required_columns),
-            'value': str(df.columns.tolist())
-        }))
-        return errors
-
-    # Validate cells
-    for colname, colspec in spec['columns']['metadata'].items():
-        validator = validator_lookup[colspec["type"]]
-        errors.extend(validator(df[colname], colspec, spec['sheets']['metadata']))
+    errors.extend(validate_sheet_generic(df, 'metadata', spec=spec))
 
     return errors
 
 
-def validate_sheet_vars(wb):
+def validate_sheet_vars(wb, spec=spec):
     errors = []
+
     if not spec['sheets']['vars'] in wb:
         return errors
 
-    required_columns = list(spec['columns']['vars'].keys())
     df = wb[spec['sheets']['vars']]
-    if df.columns.tolist() != required_columns:
-        errors.append(error({
-            'message': 'incorrect set or order of columns in "%s" worksheet, expected %s' % (spec['sheets']['vars'], required_columns),
-            'value': str(df.columns.tolist())
-        }))
-        return errors
-
-    # Validate cells
-    for colname, colspec in spec['columns']['vars'].items():
-        validator = validator_lookup[colspec["type"]]
-        errors.extend(validator(df[colname], colspec, spec['sheets']['vars']))
+    errors.extend(validate_sheet_generic(df, 'vars', spec=spec))
 
     return errors
 
 
-def validate_all_sheets_present(wb):
+def validate_all_sheets_present(wb, spec=spec):
     errors = []
     sheets = [spec['sheets']['data'], spec['sheets']['metadata'], spec['sheets']['vars']]
-    if list(wb.keys()) != sheets:
+    if list(wb.keys())[:3] != sheets:
         errors.append(error({
-            'message': 'spreadsheet should contain 3 worksheets: %s' % sheets,
+            'message': 'spreadsheet should contain 3 worksheets in order: %s' % sheets,
             'value': str(list(wb.keys()))
         }))
     return errors
-
-
-# Load dataset file specifications
-spec_file_name = 'dataset_file_def.yaml'
-spec_file_path = os.path.join(os.path.dirname(__file__), spec_file_name)
-with open(spec_file_path, encoding='utf-8') as fh:
-    spec = yaml.load(fh)
 
 
 # Register column validators in lookup
