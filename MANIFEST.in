@@ -1,5 +1,4 @@
 include LICENSE.txt
 include README.md
 include opedia_dataset_validator/dataset_file_def.yaml
-include tests/*.py
-include tests/data/*.xlsx
+include test/data/*.xlsx
