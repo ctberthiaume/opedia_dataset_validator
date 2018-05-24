@@ -15,7 +15,7 @@ columns:
     depth:
       type: float
       min: 0
-  metadata:
+  dataset_meta_data:
     dataset_short_name:
       type: string
       max: 49
@@ -43,7 +43,7 @@ columns:
     dataset_references:
       type: string
       max: 49
-  vars:
+  vars_meta_data:
     var_short_name:
       type: string
       max: 49
@@ -76,10 +76,5 @@ columns:
       max: 499
     var_comment:
       type: string
-
-sheets:
-  data: data
-  metadata: dataset_meta_data
-  vars: vars_meta_data
 
 file_date: YYYY-MM-DD

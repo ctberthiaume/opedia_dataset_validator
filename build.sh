@@ -2,6 +2,7 @@
 
 # Install pur and other dev packages
 pipenv install --dev || exit
+pipenv update
 # Update requirements.txt
 pipenv run pur -r requirements.txt || exit
 

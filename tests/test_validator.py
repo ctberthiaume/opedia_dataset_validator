@@ -44,7 +44,6 @@ def test_validate_column_floats():
     assert errors[2]['row'] == 7
 
 
-
 def test_validate_column_datetime():
     s = pd.Series(['a', '2018-05-22', '2018-02-29', '2018-05-2'], dtype=str)
     errors = odv.validator.validate_column_datetimes(s, { 'format': 'YYYY-MM-DD' }, 'foo')
@@ -56,54 +55,48 @@ def test_validate_column_datetime():
 
 
 def test_validate_filename():
-    errors = odv.validator.validate_filename('foo/bar/dataset_2018-05-22_v1.0.xlsx')
+    spec = { 'file_date': 'YYYY-MM-DD' }
+    errors = odv.validator.validate_filename('foo/bar/dataset_2018-05-22_v1.0.xlsx', spec)
     assert len(errors) == 0
 
-    errors = odv.validator.validate_filename('foo/bar/dataset_2018-05-22_1.0.xlsx')
+    errors = odv.validator.validate_filename('foo/bar/dataset_2018-05-22_1.0.xlsx', spec)
     assert len(errors) == 1
 
-    errors = odv.validator.validate_filename('foo/bar/dataset_2018-05-2_v1.0.xlsx')
+    errors = odv.validator.validate_filename('foo/bar/dataset_2018-05-2_v1.0.xlsx', spec)
     assert len(errors) == 1
 
-    errors = odv.validator.validate_filename('foo/bar/2018-05-22_v1.0.xlsx')
-    assert len(errors) == 1
-
-
-def test_validate_all_sheets_present():
-    wb = OrderedDict([(k, True) for k in ['data', 'dataset_meta_data', 'vars_meta_data']])
-    errors = odv.validator.validate_all_sheets_present(wb)
-    assert len(errors) == 0
-
-    wb = OrderedDict([(k, True) for k in ['data', 'dataset_meta_data', 'vars_meta_data', 'extra']])
-    errors = odv.validator.validate_all_sheets_present(wb)
-    assert len(errors) == 0
-
-    wb = OrderedDict([(k, True) for k in ['dataset_meta_data', 'data', 'vars_meta_data']])
-    errors = odv.validator.validate_all_sheets_present(wb)
-    assert len(errors) == 1
-
-    wb = OrderedDict([(k, True) for k in ['dataset_meta_data', 'vars_meta_data']])
-    errors = odv.validator.validate_all_sheets_present(wb)
+    errors = odv.validator.validate_filename('foo/bar/2018-05-22_v1.0.xlsx', spec)
     assert len(errors) == 1
 
 
 def test_validate_sheet_generic():
     spec = {
-        'sheets': { 'vars': 'vars_meta_data' },
-        'columns': { 'vars': OrderedDict([('a', { 'type': 'float' }), ('b', { 'type': 'float' })]) }
+        'columns': { 'vars_meta_data': OrderedDict([('a', { 'type': 'float' }), ('b', { 'type': 'float' })]) }
     }
 
     df = pd.DataFrame({ 'a': [], 'b': [] }, dtype=str)
-    errors = odv.validator.validate_sheet_generic(df, 'vars', spec=spec)
+    errors = odv.validator.validate_sheet_generic(df, 'vars_meta_data', spec)
     assert len(errors) == 0
 
     df = pd.DataFrame({ 'a': [] }, dtype=str)
-    errors = odv.validator.validate_sheet_generic(df, 'vars', spec=spec)
+    errors = odv.validator.validate_sheet_generic(df, 'vars_meta_data', spec)
     assert len(errors) == 1
 
     df = pd.DataFrame({ 'a': ['a'], 'b': [200] }, dtype=str)
-    errors = odv.validator.validate_sheet_generic(df, 'vars', spec=spec)
+    errors = odv.validator.validate_sheet_generic(df, 'vars_meta_data', spec)
     assert len(errors) == 1
+
+
+def test_validate_sheet_missing():
+    errors = odv.validator.validate_sheet_metadata({ 'wrong_sheet': True }, None)
+    assert len(errors) == 1
+
+    errors = odv.validator.validate_sheet_vars({ 'wrong_sheet': True }, None)
+    assert len(errors) == 1
+
+    errors = odv.validator.validate_sheet_data({ 'wrong_sheet': True }, None)
+    assert len(errors) == 1
+
 
 # TODO: test for data sheet custom column correspondence to vars_meta_data and
 # basic presence test for custom columns in data.

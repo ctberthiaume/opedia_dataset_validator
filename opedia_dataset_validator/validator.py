@@ -24,11 +24,10 @@ def validate(input_path):
                        keep_default_na=False, dtype=unicode)
 
     errors = []
-    errors.extend(validate_filename(input_path))
-    errors.extend(validate_all_sheets_present(wb))
-    errors.extend(validate_sheet_metadata(wb))
-    errors.extend(validate_sheet_vars(wb))
-    errors.extend(validate_sheet_data(wb))
+    errors.extend(validate_filename(input_path, spec))
+    errors.extend(validate_sheet_metadata(wb, spec))
+    errors.extend(validate_sheet_vars(wb, spec))
+    errors.extend(validate_sheet_data(wb, spec))
     return errors
 
 
@@ -162,7 +161,7 @@ def validate_column_strings(series, colspec, sheet):
     return errors
 
 
-def validate_filename(input_path, spec=spec):
+def validate_filename(input_path, spec):
     fn = os.path.basename(input_path)
     errors = []
     filename_re = re.compile(r'^(?P<shortname>.+)_(?P<date>[^_]+)_(?P<version>[^_]+)\.xlsx$')
@@ -193,18 +192,23 @@ def validate_filename(input_path, spec=spec):
     return errors
 
 
-def validate_sheet_data(wb, spec=spec):
+def validate_sheet_data(wb, spec):
     errors = []
 
-    if not spec['sheets']['data'] in wb:
+    if not 'data' in wb:
+        errors.append(error({
+            'message': '"%s" worksheet is missing' % 'data',
+            'sheet': 'data'
+        }))
         return errors
 
-    df = wb[spec['sheets']['data']]
-    errors.extend(validate_sheet_generic(df, 'data', spec=spec))
-    if len(errors):
-        return errors
+    df = wb['data']
+    errors.extend(validate_sheet_generic(df, 'data', spec))
 
-    if not spec['sheets']['vars'] in wb:
+    # Next check columns in 'data' that were defined in 'vars_meta_data'
+    # First make sure that 'vars_meta_data' doesn't have any errors, if it does
+    # don't bother with any more checks here
+    if len(validate_sheet_vars(wb, spec)) > 0:
         return errors
 
     # Now check custom data columns
@@ -212,63 +216,67 @@ def validate_sheet_data(wb, spec=spec):
     df_data = df.drop(required_columns, axis='columns')
     # Collect variable short names from vars_meta_data sheet and check that
     # data columns in 'data' sheet match data columns defined in 'vars' sheet.
-    vars_defined = wb[spec['sheets']['vars']]['var_short_name'].tolist()
+    vars_defined = wb['vars_meta_data']['var_short_name'].tolist()
     vars_found = df_data.columns.tolist()
     extra_defined = set(vars_defined).difference(set(vars_found))
     extra_found = set(vars_found).difference(set(vars_defined))
     if extra_defined:
         errors.append(error({
-            'message': 'some data variables were defined in the "%s" worksheet but were not found in the "%s" worksheet' % (spec['sheets']['vars'], spec['sheets']['data']),
+            'message': 'some data variables were defined in the "%s" worksheet but were not found in the "%s" worksheet' % ('vars_meta_data', 'data'),
             'value': ', '.join(extra_defined)
         }))
     if extra_found:
         errors.append(error({
-            'message': 'some data variables were found in the "%s" worksheet but were not defined in the "%s" worksheet' % (spec['sheets']['data'], spec['sheets']['vars']),
+            'message': 'some data variables were found in the "%s" worksheet but were not defined in the "%s" worksheet' % ('data', 'vars_meta_data'),
             'value': ', '.join(extra_found)
         }))
 
     # Now validate the actual data only on the condition of
     # proper missing values.
     # TODO: Is there any type-checking expected in custom vars?
-    vars_missing_value = wb[spec['sheets']['vars']]['var_missing_value'].tolist()
+    vars_missing_value = wb['vars_meta_data']['var_missing_value'].tolist()
     for var, na in zip(vars_defined, vars_missing_value):
         if var not in extra_defined:
-            sheet = spec['sheets']['vars']
+            sheet = 'vars_meta_data'
             colspec = { 'required': True, 'na': na }
-            empty_errors, _ = validate_column_generic(df_data[var], colspec, spec['sheets']['data'])
+            empty_errors, _ = validate_column_generic(df_data[var], colspec, 'data')
             errors.extend(empty_errors)
 
     return errors
 
 
-def validate_sheet_generic(df, sheet, spec=spec):
+def validate_sheet_generic(df, sheet, spec):
     errors = []
 
     required_columns = list(spec['columns'][sheet].keys())
     if df.columns.tolist()[:len(required_columns)] != required_columns:
         errors.append(error({
-            'message': 'the first %d columns of the "%s" worksheet should be %s' % (len(required_columns), spec['sheets'][sheet], required_columns),
+            'message': 'the first %d columns of the "%s" worksheet should be %s' % (len(required_columns), sheet, required_columns),
             'value': str(df.columns.tolist()),
-            'sheet': spec['sheets'][sheet]
+            'sheet': sheet
         }))
         return errors
 
     # Validate cells
     for colname, colspec in spec['columns'][sheet].items():
-        validator = validator_lookup[colspec['type']]
-        errors.extend(validator(df[colname], colspec, spec['sheets'][sheet]))
+        v = validator_lookup[colspec['type']]
+        errors.extend(v(df[colname], colspec, sheet))
 
     return errors
 
 
-def validate_sheet_metadata(wb, spec=spec):
+def validate_sheet_metadata(wb, spec):
     errors = []
 
-    if not spec['sheets']['metadata'] in wb:
+    if not 'dataset_meta_data' in wb:
+        errors.append(error({
+            'message': '"%s" worksheet is missing' % 'dataset_meta_data',
+            'sheet': 'dataset_meta_data'
+        }))
         return errors
 
-    df = wb[spec['sheets']['metadata']]
-    errors.extend(validate_sheet_generic(df, 'metadata', spec=spec))
+    df = wb['dataset_meta_data']
+    errors.extend(validate_sheet_generic(df, 'dataset_meta_data', spec))
 
     return errors
 
@@ -276,23 +284,16 @@ def validate_sheet_metadata(wb, spec=spec):
 def validate_sheet_vars(wb, spec=spec):
     errors = []
 
-    if not spec['sheets']['vars'] in wb:
+    if not 'vars_meta_data' in wb:
+        errors.append(error({
+            'message': '"%s" worksheet is missing' % 'vars_meta_data',
+            'sheet': 'vars_meta_data'
+        }))
         return errors
 
-    df = wb[spec['sheets']['vars']]
-    errors.extend(validate_sheet_generic(df, 'vars', spec=spec))
+    df = wb['vars_meta_data']
+    errors.extend(validate_sheet_generic(df, 'vars_meta_data', spec))
 
-    return errors
-
-
-def validate_all_sheets_present(wb, spec=spec):
-    errors = []
-    sheets = [spec['sheets']['data'], spec['sheets']['metadata'], spec['sheets']['vars']]
-    if list(wb.keys())[:3] != sheets:
-        errors.append(error({
-            'message': 'spreadsheet should contain 3 worksheets in order: %s' % sheets,
-            'value': str(list(wb.keys()))
-        }))
     return errors
 
 
