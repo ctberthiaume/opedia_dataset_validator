@@ -47,14 +47,14 @@ setup(
     include_package_data=True,
     platforms='any',
     classifiers=[
-        'Development Status :: 3 - Alpha',
+        'Development Status :: 4 - Beta',
+        'Environment :: Console',
         'Intended Audience :: Science/Research',
         'Topic :: Scientific/Engineering',
         'License :: OSI Approved :: MIT License',
         'Programming Language :: Python :: 2',
         'Programming Language :: Python :: 2.7',
-        'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.6'
+        'Programming Language :: Python :: 3'
     ],
     keywords = ['opedia', 'validator'],
     python_requires='>=2.6, <4',
@@ -62,7 +62,7 @@ setup(
         'arrow',
         'click',
         'oyaml',
-        'pandas',
+        'pandas==0.22.0',
         'xlrd'
     ],
     tests_require=['pytest'],

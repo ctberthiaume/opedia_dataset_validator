@@ -35,7 +35,11 @@ def test_validate_column_strings():
 
 
 def test_validate_column_floats():
-    s = pd.Series(['a', 98.6, 99, 100, 0, -1], dtype=str)
+    # Because we're pinning to pandas 0.22.0 for windows support and there's a
+    # bug in 0.22.0 when creating a Series of numbers with dtype=str, must cast
+    # after the fact here. Remove when safe to upgrade pandas dependency to
+    # 0.23.0. https://github.com/pandas-dev/pandas/issues/16605
+    s = pd.Series(['a', 98.6, 99, 100, 0, -1], dtype=str).astype(str)
     errors = odv.validator.validate_column_floats(s, { 'max': 99, 'min': 0 }, 'foo')
     errors = sorted(errors, key=lambda e: e['row'])
     assert len(errors) == 3

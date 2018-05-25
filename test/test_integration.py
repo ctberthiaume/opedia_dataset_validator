@@ -10,12 +10,12 @@ def runner():
 
 @pytest.fixture
 def excel_file1():
-    return os.path.join('tests', 'data', 'AllErrors_2018-05-19_v1.0.xlsx')
+    return os.path.join('test', 'data', 'AllErrors_2018-05-19_v1.0.xlsx')
 
 
 @pytest.fixture
 def excel_file2():
-    return os.path.join('tests', 'data', 'CustomDataErrors_2018-05-19_v1.0.xlsx')
+    return os.path.join('test', 'data', 'CustomDataErrors_2018-05-19_v1.0.xlsx')
 
 
 def test_excel_file_integration(runner, excel_file1):
