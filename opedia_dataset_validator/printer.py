@@ -1,4 +1,5 @@
 import click
+import os
 from . import error
 
 def print_tsv_errors(errors, fh, print_all=True, header=True, print_value=False):
@@ -21,4 +22,4 @@ def print_tsv_errors(errors, fh, print_all=True, header=True, print_value=False)
         e = error.stringify(e)
         outlines.append('\t'.join([e[k] for k in outkeys]))
 
-    fh.write('\n'.join(outlines) + '\n')
+    fh.write(os.linesep.join(outlines) + os.linesep)
