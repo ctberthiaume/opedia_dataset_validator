@@ -66,6 +66,9 @@ def test_validate_filename():
     errors = odv.validator.validate_filename('foo/bar/dataset_2018-05-22_1.0.xlsx', spec)
     assert len(errors) == 1
 
+    errors = odv.validator.validate_filename('foo/bar/dataset_2018-05-32_v1.0.xlsx', spec)
+    assert len(errors) == 1
+
     errors = odv.validator.validate_filename('foo/bar/dataset_2018-05-2_v1.0.xlsx', spec)
     assert len(errors) == 1
 

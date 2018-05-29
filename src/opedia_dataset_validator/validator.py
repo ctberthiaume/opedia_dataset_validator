@@ -176,7 +176,7 @@ def validate_filename(input_path, spec):
             dt = arrow.get(m.group('date'), spec['file_date'])
         except ValueError as e:
             errors.append(error({
-                'message': 'error in filename datatime string: %s' % e,
+                'message': 'error in filename datetime string: %s' % e,
                 'value': m.group('date')
             }))
         except arrow.parser.ParserError as e:

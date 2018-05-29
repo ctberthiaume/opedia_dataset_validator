@@ -1,10 +1,11 @@
 from setuptools import setup, find_packages
 from setuptools.command.test import test as TestCommand
+import os
 import re
 import sys
 
 
-VERSIONFILE="opedia_dataset_validator/_version.py"
+VERSIONFILE = os.path.join('src', 'opedia_dataset_validator', '_version.py')
 verstrline = open(VERSIONFILE, "rt").read()
 VSRE = r"^__version__ = ['\"]([^'\"]*)['\"]"
 mo = re.search(VSRE, verstrline, re.M)
@@ -43,7 +44,8 @@ setup(
     long_description_content_type='text/markdown',
     url=url,
     download_url=download_url,
-    packages=find_packages(),
+    packages=find_packages(where='src'),
+    package_dir={'': 'src'},
     include_package_data=True,
     platforms='any',
     classifiers=[
@@ -62,7 +64,7 @@ setup(
         'arrow',
         'click',
         'oyaml',
-        'pandas==0.22.0',
+        'pandas>=0.21.0,<=0.22.0',
         'xlrd'
     ],
     tests_require=['pytest'],

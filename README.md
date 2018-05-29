@@ -3,6 +3,18 @@ opedia_dataset_validator
 
 A tool to detect errors in an [Opedia dataset Excel file](https://github.com/mdashkezari/opedia/tree/master/template).
 
+### Install
+
+#### From source
+```sh
+python setup.py install
+```
+
+#### From PyPi with `pip`
+```sh
+# Probably should put this in a virtual environment
+pip install opedia_dataset_validator
+```
 
 ### Usage
 ```
@@ -24,3 +36,7 @@ Options:
   --version         Show the version and exit.
   -h, --help        Show this message and exit.
 ```
+
+
+### Run tests
+Install `pytest` and this package in a virtual environment, then run `pytest` from the root of the source directory. Or, to test against Python 2 and 3, install `tox` and then run `tox` from the root of the source directory.
