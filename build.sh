@@ -1,4 +1,10 @@
 #!/bin/sh
+# Run this from within a conda environment seeded with just pip
+# conda create -n pydev pip
+
+# Then install other python dev packages with pip
+# conda activate pydev
+# (pydev) pip install keyring twine tox pytest pipenv
 
 # Install pur and other dev packages
 pipenv --rm

@@ -5,6 +5,10 @@ from . import error
 def print_tsv_errors(errors, fh, print_all=True, header=True, print_value=False):
     errors = sorted(errors, key=error.error_sort_key)
 
+    if not errors:
+        fh.write('No errors found.%s' % os.linesep)
+        return
+
     if not print_all:
         errors = error.filter_first_seen(errors)
 

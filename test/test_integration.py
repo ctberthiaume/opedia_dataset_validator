@@ -35,6 +35,12 @@ def excel_file4():
     return os.path.join('test', 'data', 'ExtraDataErrors2_2018-05-19_v1.0.xlsx')
 
 
+@pytest.fixture
+def excel_file5():
+    """Valid dataset file."""
+    return os.path.join('test', 'data', 'NoErrors_2018-05-19_v1.0.xlsx')
+
+
 def test_excel_file_integration(runner, excel_file1):
     result = runner.invoke(odv.cli.main, [excel_file1, '-'])
     lines = result.output.rstrip().split(os.linesep)
@@ -91,3 +97,10 @@ def test_excel_file_integration_extra_data_in_vars_sheet(runner, excel_file4):
     assert lines[0].split('\t') == ['#sheet', 'column', 'row', 'message']
     for line in lines:
         assert len(line.split('\t')) == 4
+
+def test_excel_file_integration_extra_data_in_vars_sheet(runner, excel_file5):
+    result = runner.invoke(odv.cli.main, [excel_file5, '-'])
+    lines = result.output.rstrip().split(os.linesep)
+    assert result.exit_code == 0
+    assert len(lines) == 1
+    assert lines[0] == 'No errors found.'
