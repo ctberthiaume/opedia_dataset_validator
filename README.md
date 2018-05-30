@@ -5,15 +5,15 @@ A tool to detect errors in an [Opedia dataset Excel file](https://github.com/mda
 
 ### Install
 
-#### From source
-```sh
-python setup.py install
-```
-
 #### From PyPi with `pip`
 ```sh
-# Probably should put this in a virtual environment
 pip install opedia_dataset_validator
+```
+
+#### From source
+In the source root directory,
+```sh
+pip install .
 ```
 
 ### Usage
@@ -39,4 +39,4 @@ Options:
 
 
 ### Run tests
-Install `pytest` and this package in a virtual environment, then run `pytest` from the root of the source directory. Or, to test against Python 2 and 3, install `tox` and then run `tox` from the root of the source directory.
+Install `pytest` and this package in a virtual environment, then run `pytest` from the root of the source directory. Or, to test against Python 2 and 3, install `tox` along with `pytest` and then run `tox` from the root of the source directory.
